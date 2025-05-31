@@ -1,3 +1,11 @@
+check_for_palette_updates:
+  PHA
+  LDA PALETTE_NEEDS_UPDATING
+  BNE :+
+  PLA
+  rtl
+: pla
+  stz PALETTE_NEEDS_UPDATING
 
 write_palette_data:
   PHX
@@ -19,6 +27,7 @@ write_palette_data:
 palette_entry:
 
   LDA PALETTE_UPDATE_START, Y
+  AND PALETTE_FILTER
   ASL A
   TAX
   LDA palette_lookup, X
@@ -27,6 +36,7 @@ palette_entry:
   STA CGDATA
 
   LDA PALETTE_UPDATE_START + 1, Y
+  AND PALETTE_FILTER
   ASL A
   TAX 
   LDA palette_lookup, X
@@ -35,6 +45,7 @@ palette_entry:
   STA CGDATA
 
   LDA PALETTE_UPDATE_START + 2, Y
+  AND PALETTE_FILTER
   ASL A
   TAX 
   LDA palette_lookup, X
@@ -43,6 +54,7 @@ palette_entry:
   STA CGDATA
 
   LDA PALETTE_UPDATE_START + 3, Y
+  AND PALETTE_FILTER
   ASL A
   TAX 
   LDA palette_lookup, X
@@ -91,6 +103,10 @@ skip_writing_four_empties:
   ; done after $20
   RTL
   
+zero_all_palette_long:
+  jsr zero_all_palette
+  rtl
+
 zero_all_palette:
   LDY #$00
   LDX #$02
@@ -105,19 +121,44 @@ zero_all_palette:
 
   RTS
 
+snes_default_bg_palette:
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+
 snes_sprite_palatte:
-; .byte $D6, $10, $FF, $7F, $D6, $10, $00, $00, $91, $29, $CE, $39, $5B, $29, $35, $3A
-; .byte $77, $46, $B5, $56, $B9, $4E, $FB, $56, $3D, $5F, $7B, $6F, $FC, $7F, $FF, $7F
-.byte $1F, $00, $FF, $7F, $53, $08, $00, $00, $91, $29, $CE, $39, $5B, $29, $35, $3A
-.byte $77, $46, $B5, $56, $B9, $4E, $FB, $56, $3D, $5F, $7B, $6F, $D7, $18, $FF, $7F
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+
 write_default_palettes:
+  STZ CGADD
+  sta CGADD
+  LDY #$00
+: LDA snes_sprite_palatte, y
+  STA CGDATA
+  INY
+  CMP #$40
+  BNE :-
+
+
   LDA #$80
   sta CGADD
   LDY #$00
 : LDA snes_sprite_palatte, y
   STA CGDATA
   INY
-  CMP #$20
+  CMP #$40
   BNE :-
   rts
 

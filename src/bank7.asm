@@ -271,7 +271,13 @@
 .byte $C5, $D6, $7C, $D0, $0E, $A9, $0B, $95, $7C, $BD, $0E, $03, $C9, $8A, $B0, $04
 .byte $FE, $0E, $03, $60, $A9, $00, $9D, $0E, $03, $4C, $4C, $C3, $A9, $F4, $9D, $2F
 .byte $03, $D6, $7C, $D0, $13, $B5, $34, $F0, $F0, $B5, $78, $F0, $04, $A9, $01, $95
-.byte $78, $20, $C4, $C6, $A9, $01, $95, $70, $60, $B5, $F5, $29, $80, $F0, $15, $86
+.byte $78
+
+; reset player equipment
+ JSR @maybe_reset_player_equipment ; $C6C4
+
+
+.byte $A9, $01, $95, $70, $60, $B5, $F5, $29, $80, $F0, $15, $86
 .byte $10, $8A, $49, $01, $AA, $B5, $34, $F0, $09, $D6, $34, $A6, $10, $F6, $34, $4C
 .byte $39, $C4, $A6, $10, $60, $A5, $40, $D0, $0F, $BD, $50, $03, $18, $69, $02, $C9
 .byte $F0, $B0, $1C, $9D, $50, $03, $90, $0D, $BD, $2F, $03, $18, $69, $FE, $C9, $F0
@@ -317,9 +323,31 @@
 .byte $01, $B9, $90, $00, $F0, $05, $88, $10, $F8, $30, $BA, $F6, $8A, $B5, $8A, $38
 .byte $E9, $01, $0A, $85, $08, $8A, $4A, $66, $08, $A5, $08, $99, $93, $00, $A9, $01
 .byte $99, $90, $00, $60, $A9, $05, $95, $82, $D0, $90, $A2, $00, $20, $C0, $C6, $E8
-.byte $A9, $00, $95, $78, $A9, $00, $95, $76, $95, $7A, $95, $80, $95, $82, $95, $86
-.byte $95, $8A, $95, $88, $A9, $00, $9D, $2F, $03, $95, $72, $9D, $50, $03, $95, $74
-.byte $95, $7C, $95, $7E, $95, $84, $60, $A2, $00, $20, $EE, $C6, $A2, $01, $B4, $90
+.byte $A9, $00, $95, $78
+
+
+; player death weapon reset
+; C6C4
+ LDA #$00
+ STA $76,X
+ STA $7A,X
+ STA $80,X
+ STA $82,X
+ STA $86,X
+ STA $8A,X
+ STA $88,X
+
+ LDA #$00
+ STA $032F,X
+ STA $72,X
+ STA $0350,X
+ STA $74,X
+ STA $7C,X
+ STA $7E,X
+ STA $84,X
+ RTS
+
+.byte $A2, $00, $20, $EE, $C6, $A2, $01, $B4, $90
 .byte $D0, $08, $A9, $00, $9D, $0C, $03, $60, $16, $2E, $88, $D0, $4B, $86, $10, $E6
 
 
@@ -959,9 +987,26 @@
   PLA
   RTS
 
+; E642 - Play sound/music routine
+  jsr @sound_routine_hook
+  ; PHA
+  ; LDA $1B
+  ; ORA #$80
+  ; STA $1B
 
-.byte $48, $A5, $1B, $09, $80, $85, $1B, $68, $20, $25, $E6, $20, $AC, $FD
-.byte $20, $36, $E6, $A5, $1B, $29, $7F, $85, $1B, $60, $20, $25, $E6, $20, $FE, $FE
+  ; PLA
+  ; JSR $E625 ; load sound bank (bank 3)
+  ; JSR $FDAC ; play sound
+  ; JSR $E636 ; return to previous bank
+
+  LDA $1B
+  AND #$7F
+  STA $1B
+  RTS
+
+  nops 14
+
+.byte $20, $25, $E6, $20, $FE, $FE
 .byte $4C, $36, $E6, $A0, $03, $20, $19, $E6, $4C, $76, $F6, $A4, $30, $B9, $81, $E6
 .byte $20, $18, $E6, $4C, $FF, $DF, $A4, $30, $B9, $81, $E6, $20, $18, $E6, $4C, $2B
 .byte $E1, $00, $00, $04, $04, $01, $04, $A4, $30, $B9, $92, $E6, $20, $18, $E6, $4C
@@ -1106,7 +1151,7 @@
   JSR $E619
   JSR $8001
   JSR $EE2F
-  JSR $E663
+  JSR @sound_conversion_point ; $E663 ; do sound things
   JSR $ED1D
   INC $FA
   JSR $E826
@@ -1413,11 +1458,44 @@ nops 12
 .byte $04, $05, $05, $85, $04, $4C, $5F, $EE, $A5, $F5, $29, $30, $F0, $1D, $20, $A4
 .byte $EE, $A6, $18, $E0, $01, $D0, $15, $29, $20, $D0, $05, $A9, $03, $4C, $17, $EE
 .byte $E6, $22, $A9, $02, $38, $E5, $22, $D0, $02, $85, $22, $60, $20, $41, $ED, $A2
-.byte $01, $86, $18, $60, $A2, $F0, $86, $2A, $A2, $01, $86, $2B, $60, $20, $EA, $EE
-.byte $A4, $22, $84, $1D, $A9, $00, $85, $30, $85, $23, $A9, $04, $85, $3C, $A2, $07
-.byte $A9, $00, $9D, $E4, $07, $CA, $10, $FA, $85, $1C, $85, $3E, $85, $3F, $A9, $03
-.byte $AC, $EF, $07, $F0, $02, $A9, $1E, $85, $34, $A4, $1D, $F0, $02, $85, $35, $A9
-.byte $10, $85, $36, $85, $37, $60, $A2, $60, $D0, $02, $A2, $30, $20, $C3, $E8, $95
+.byte $01, $86, $18, $60, $A2, $F0, $86, $2A, $A2, $01, $86, $2B, $60
+
+; start level load
+; EEAD
+JSR $EEEA
+LDY $22
+STY $1D
+jsr @load_configured_starting_level ; LDA #$00
+NOP                                ; STA $30
+STA $23
+LDA #$04
+STA $3C
+LDX #$07
+LDA #$00
+: STA $07E4,X
+  DEX
+  BPL :-
+STA $1C
+STA $3E
+STA $3F
+jsr @load_configured_lives
+nops 14
+; LDA #$03
+; LDY $07EF
+; BEQ :+
+;   LDA #$1E ; set to 30 if they put in the cheat code
+; :
+; STA $34
+; LDY $1D
+; BEQ :+
+;   STA $35
+; :
+LDA #$10
+STA $36
+STA $37
+RTS
+
+.byte $A2, $60, $D0, $02, $A2, $30, $20, $C3, $E8, $95
 .byte $00, $E8, $E0, $F0, $D0, $F9, $A2, $07, $A0, $03, $84, $01, $A9, $00, $85, $00
 
 
@@ -1800,7 +1878,15 @@ LDA #$F0
 .byte $8D, $E0, $06, $E0, $03, $F0, $10, $29, $F0, $C9, $20, $F0, $05, $A9, $01, $4C
 .byte $B4, $FE, $A9, $00, $9D, $6D, $06, $AC, $E2, $06, $C0, $00, $D0, $05, $AD, $53
 .byte $06, $D0, $1B, $98, $29, $0F, $A8, $A9, $00, $C0, $08, $D0, $03, $4C, $DE, $FE
-.byte $A9, $30, $99, $00, $40, $20, $75, $86, $99, $01, $40, $20, $75, $86, $AD, $E0
+
+; $FED0:
+  LDA #$30
+  jsr WriteAPUSq0Ctrl0_I_Y ; STA Sq0Duty_4000,Y
+  JSR $8675
+  jsr WriteAPUSq0Ctrl1_I_Y ; STA Sq0Sweep_4001,Y
+  JSR $8675
+
+.byte $AD, $E0
 .byte $06, $9D, $4F, $06, $CE, $E1, $06, $30, $0C, $AC, $DF, $06, $C8, $C8, $C8, $8C
 .byte $DF, $06, $4C, $51, $FE, $A9, $00, $85, $ED, $68, $A8, $68, $AA, $60, $8A, $48
 
@@ -1808,7 +1894,13 @@ LDA #$F0
 ; FF00 - bank 7
 .byte $98, $48, $A9, $00, $8D, $DA, $06, $8D, $DB, $06, $8D, $DC, $06, $8D, $DD, $06
 .byte $8D, $D7, $06, $8D, $D8, $06, $8D, $EC, $06, $8D, $ED, $06, $8D, $AC, $06, $20
-.byte $0C, $87, $A9, $0F, $8D, $15, $40, $A2, $05, $A0, $00, $A9, $00, $99, $4F, $06
+.byte $0C, $87, $A9, $0F
+
+; FF24
+jsr WriteAPUControl ; STA ApuStatus_4015
+
+
+.byte $A2, $05, $A0, $00, $A9, $00, $99, $4F, $06
 .byte $C8, $CA, $D0, $F9, $68, $A8, $68, $AA, $4C, $EF, $86, $FF, $FF, $FF, $FF, $FF
 
 ; freespace, use sparingly...
@@ -1855,8 +1947,59 @@ LDA #$F0
   jml return_from_nes_nmi
 ;   RTI
 
-repeat $FF, 3
-repeat $FF, 64
+@sound_routine_hook:
+  ; original code
+  PHA
+  LDA $1B
+  ORA #$80
+  STA $1B
+
+  PLA
+  JSR $E625 ; load sound bank (bank 3)
+  JSR $FDAC ; play sound
+  JSR $E636 ; return to previous bank
+
+  rts
+
+@sound_conversion_point:
+  JSR $E663
+  ; jslb SnesUpdateAudio, $a0
+  rts
+
+@load_configured_starting_level:
+LDA OPTIONS_STARTING_LEVEL
+STA $30
+; set to zero so if the game loops we go back to lvl 1
+STZ OPTIONS_STARTING_LEVEL
+RTS
+
+@lives_options:
+.byte 03, 10, 30, 99
+
+@load_configured_lives:
+LDA OPTIONS_LIVES
+TAY
+LDA @lives_options, Y
+
+LDY $07EF
+BEQ :+
+  LDA #$1E ; set to 30 if they put in the cheat code
+:
+STA $34
+LDY $1D
+BEQ :+
+  STA $35
+:
+
+rts
+
+@maybe_reset_player_equipment:
+LDA OPTIONS_UPGRADE
+BNE :+
+  JSR $C6C4
+:
+RTS
+
 repeat $FF, 16
 
 ; .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF

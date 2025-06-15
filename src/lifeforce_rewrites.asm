@@ -96,6 +96,7 @@ tile_edit_entries:
   CPX #$08
   BNE :+
     TYA
+    CLC
     ADC #$08
     TAY
     LDX #$00
@@ -193,6 +194,8 @@ c074_tile_and_attribute_rewrite:
   LDA #$01
   STA ATTR_NES_VM_COUNT
   STA ATTR_NES_HAS_VALUES
+  STZ ATTR_NES_VM_ATTR_START + 1
+
   jslb convert_nes_attributes_and_immediately_dma_them, $a0
 
   INY
@@ -216,8 +219,10 @@ c074_attrributes:
   STA ATTR_NES_VM_ATTR_START
   LDA #$01
   STA ATTR_NES_VM_COUNT
-  STA ATTR_NES_HAS_VALUES
-  jslb convert_nes_attributes_and_immediately_dma_them, $a0
+  ; STA ATTR_NES_HAS_VALUES
+  STZ ATTR_NES_VM_ATTR_START + 1
+  ; jslb convert_nes_attributes_and_immediately_dma_them, $a0
+  jslb write_single_attribute, $a0
   INY
   rtl
 
@@ -302,20 +307,34 @@ nes_c0a3_rewrite:
   DEY
 
 c0a3_start:
-
-
-
   LDA $0700, Y
   STA VMADDH
-  STA ATTR_NES_VM_ADDR_HB
+  ; STA ATTR_NES_VM_ADDR_HB
   INY
-  ; AND #$03
-  ; CMP #$03
-  ; BNE :+
+
+  CMP #$20
+  BCS :+
+   jmp c0a3_tiles
+  :
+
+  AND #$03
+  CMP #$03
+  BNE :+
+
+
   LDA $0700,Y
   STA VMADDL
-  STA ATTR_NES_VM_ADDR_LB
+  AND #$C0
+  CMP #$C0
+  BNE :+
+
+    ; attributes
+    jmp c0a3_attr
+: 
+  LDA $0700,Y
   INY
+  STA VMADDL
+  ; STA ATTR_NES_VM_ADDR_LB
 
 ;   AND #$C0
 ;   CMP #$C0
@@ -335,24 +354,33 @@ c0a3_start:
 ;   INY
 bg_c0a3:
   LDX $0700,Y
-  STX ATTR_NES_VM_COUNT
+  ; STX ATTR_NES_VM_COUNT
 
   INY
 bg_C0A7:
   LDA $0700,Y
   STA VMDATAL
-  STA ($04)
+  ; STA ($04)
+  ; INC $04
+
+  ; LDA #$00
+  ; STA ($04)
+
   INY
   DEX
   BNE bg_C0A7
 
-  LDA #$01
-  STA ATTR_NES_HAS_VALUES
-  jslb convert_nes_attributes_and_immediately_dma_them, $a0
+  ; LDA #<ATTR_NES_VM_ATTR_START
+  ; STA $04
+
+  ; LDA #$01
+  ; STA ATTR_NES_HAS_VALUES
+  ; jslb convert_nes_attributes_and_immediately_dma_them, $a0
 
   LDA $0700,Y
   BPL c0a3_start
 
+done_with_c0a7:
   PLA
   STA $05
   PLA
@@ -375,6 +403,120 @@ PLX
 jsr load_attributes_for_x
 rtl
 
+c0a3_attr:
+  LDA $06ff, Y  
+  STA ATTR_NES_VM_ADDR_HB
+  LDA $0700,Y
+  STA ATTR_NES_VM_ADDR_LB
+  INY
+
+attr_c0a3:
+  LDX $0700,Y
+  STX ATTR_NES_VM_COUNT
+  INY
+
+attr_C0A7:
+  LDA $0700,Y
+  STA VMDATAL
+  STA ($04)
+  INC $04
+
+  LDA #$00
+  STA ($04)
+
+  INY
+  DEX
+  BNE attr_C0A7
+
+  LDA #<ATTR_NES_VM_ATTR_START
+  STA $04
+
+  LDA #$01
+  STA ATTR_NES_HAS_VALUES
+  jslb convert_nes_attributes_and_immediately_dma_them, $a0
+
+  LDA $0700,Y
+  BMI :+
+  JMP c0a3_start
+: JMP done_with_c0a7
+
+
+
+c0a3_tiles:
+
+  LDA $0700,Y
+  STA VMADDL
+  INY
+
+  LDX $0700,Y
+  CPX #$09
+  BCC only_low_tiles
+
+  LDA VMAIN_STATE
+  ORA #$80
+  STA VMAIN
+
+  INY
+  STX $04
+  LDX #$00
+
+: LDA $0700, Y
+  STA VMDATAL
+  LDA $0708, Y
+  STA VMDATAH
+  INY
+
+  INX
+  CPX #$08
+  BNE :+
+    TYA
+    CLC
+    ADC #$08
+    TAY
+    LDX #$00
+    STZ VMDATAH
+    STZ VMDATAH
+    STZ VMDATAH
+    STZ VMDATAH
+    STZ VMDATAH
+    STZ VMDATAH
+    STZ VMDATAH
+    STZ VMDATAH
+    DEC $04
+    DEC $04
+    DEC $04
+    DEC $04
+    DEC $04
+    DEC $04
+    DEC $04
+    DEC $04
+: 
+  DEC $04
+  LDA $04
+  BNE :--
+
+  LDA VMAIN_STATE
+  STA VMAIN
+
+  LDA $0700, Y
+  BMI :+
+  JMP c0a3_start
+: JMP done_with_c0a7
+
+only_low_tiles:
+
+  INY
+: LDA $0700, Y
+  STA VMDATAL
+  INY
+  DEX
+  BNE :-
+  
+
+  LDA $0700, Y
+  BMI :+
+  JMP c0a3_start
+: JMP done_with_c0a7
 
 F094:
   LDA $F107,X
@@ -391,25 +533,6 @@ F0A7:
   LDY #$01
   LDA ($00),Y
   STA VMADDH ; PpuAddr_2006
-  ; check if it's attributes  
-;   STA ATTR_NES_VM_ADDR_HB
-;   PHA
-;   AND #$03
-;   CMP #$03
-;   BNE :++
-;     PLA
-;     DEY
-;     LDA ($00), Y
-;     STA ATTR_NES_VM_ADDR_LB
-;     AND #$F0
-;     CMP #$C0
-;     BNE :+
-;       ; found attributes handle them
-;       JMP handle_f094_attributes
-;     :    
-;     BRA :++
-; :
-;   PLA
   DEY
   LDA ($00),Y
   STA VMADDL ; PpuAddr_2006
@@ -484,79 +607,6 @@ EF37:
   INC $01,X
 EF40:
   RTS
-
-
-; handle_f094_attributes:
-
-;   LDX #$00
-;   LDA #$02
-;   JSR EF37
-  
-; next_set_of_attributes:
-;   LDY #$00
-;   LDA ($00),Y
-;   CMP #$FF
-;   BEQ F104 ; done
-
-;   CMP #$7F    
-;   BEQ F0FC ; done with this write, move to next one 
-
-;   TAY
-;   BPL write_repeated_attribute_value ; write same value X times
-
-;   AND #$7F    ; write X values sequentially
-;   STA $02
-;   STA ATTR_NES_VM_COUNT
-;   LDY #$01
-
-;   PHX
-;   LDX #$00
-; :
-;   LDA ($00),Y
-;   STA ATTR_NES_VM_ATTR_START, X
-;   ; STA VMDATAL ; PpuData_2007
-
-  
-;   CPY $02
-;   BEQ :+
-
-;   INY
-;   INX  
-;   BNE :-
-; :
-;   LDA #$01
-;   STA ATTR_NES_HAS_VALUES
-;   jslb convert_nes_attributes_and_immediately_dma_them, $a0
-
-;   PLX
-;   LDA #$01
-;   CLC
-;   ADC $02
-
-; done_with_attributes:
-;   JSR EF37
-;   BRA next_set_of_attributes
-
-; write_repeated_attribute_value:
-;   LDX #$00
-;   LDY #$01
-;   STA $02
-;   LDA ($00),Y
-;   LDY $02
-;   STY ATTR_NES_VM_COUNT
-; :
-;   ; STA VMDATAL ; PpuData_2007
-;   STA ATTR_NES_VM_ATTR_START, X
-;   DEY
-;   INX
-;   BNE :-
-  
-;   LDA #$01
-;   STA ATTR_NES_HAS_VALUES
-;   jslb convert_nes_attributes_and_immediately_dma_them, $a0
-
-;   LDA #$02
-;   BRA done_with_attributes
 
 ; pointers to the attribute values give values of X
 load_attributes_for_x:

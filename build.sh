@@ -3,6 +3,10 @@ export PATH=$PATH:../cc65-snapshot-win32/bin
 export GAME=Lifeforce
 set -e
 
+go run utilities/generate_options_asm.go
+mv options.bin ./src/options.bin
+mv options_macro_defs.asm ./src/options_macro_defs.asm
+
 cd "$(dirname "$0")"
 
 mkdir -p out

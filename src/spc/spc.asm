@@ -192,7 +192,7 @@ start:
         mov $F2,#$27
         mov $F3,#$1F
         mov $F2,#$37
-        mov $F3,#$5F
+        mov $F3,#$1F
         mov $F2,#$47
         mov $F3,#$1F
 
@@ -234,7 +234,6 @@ start:
 next_xfer:
         mov $F4,#$7D            ; move $7D to port 0 (SPC ready)
 wait:
-        
         call check_timer3
         call check_timers
         call check_timers2
@@ -929,14 +928,14 @@ dmc_play:
 .selectPlaybackSpeed:
         mov a,pcm_freq
         cmp a,$4010+x
-        ; bcc .slowspeed        ;  If pcm_freq < threshold value in a, slow speed
+        bcc .slowspeed        ;  If pcm_freq < threshold value in a, slow speed
 
 .normalspeed:                 ;  Otherwise, normal speed
 
         mov $F2,!DmcPitchL
-        mov $F3,#$00
+        mov $F3,#$06
         mov $F2,!DmcPitchH
-        mov $F3,#$18
+        mov $F3,#$0b
         jmp .selectPlaybackVolume
 .slowspeed:                     
         mov $F2,!DmcPitchL
@@ -1623,9 +1622,6 @@ ret
 ;-----------------------------------------
 ;  Check timers 2 subroutine
 check_timers2:
-        ; call check_brr_playing
-        ; beq nonsweepx
-
         mov a,sq4005
         and a,#%10000000
         beq nonsweepx
@@ -2048,41 +2044,8 @@ tri_samp5: incsrc "tri6_sr2.asm"
 tri_samp6: incsrc "tri6_sr3.asm"
 tri_samp7: incsrc "tri6_sr4.asm"
 
-
-; infidelity's "play a brr routine"
-check_brr_playing:
-  MOV $F2,#$60
-  MOV $F3,#$7F
-  MOV $F2,#$61
-  MOV $F3,#$7F
-  MOV $F2,#$62
-  MOV $F3,#$00
-  MOV $F2,#$63
-  MOV $F3,#$10
-  MOV $F2,#$67
-  MOV $F3,#$4F
-  MOV A,$F6
-  
-  CMP A,#$1E
-  BEQ brr_flying_knee
-  
-  CMP A,#$1D
-  BEQ brr_contra_file
-
-  RET
-
-brr_flying_knee:
-  MOV $F2,#$64
-  MOV $F3,#$18
-  MOV $F2,#$4C
-  MOV $F3,#$40
-  RET
-brr_contra_file:
-  MOV $F2,#$64
-  MOV $F3,#$19
-  MOV $F2,#$4C
-  MOV $F3,#$40
-  RET
-
 spc_driver_end:
 print "spc driver end = ", pc
+dw $0000
+dw $1000
+arch 65816

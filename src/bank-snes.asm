@@ -181,13 +181,11 @@ initialize_registers:
   LDA #$00
   ; LDA #$01 ; uncomment this to use auto-poll joypad
   STA NMITIMEN_STATE
-  ; JSL upload_sound_emulator_to_spc
   
   ; jsl spc_init_dpcm
   jsl spc_init_driver
-
   jsr write_sound_wram_routines
-    STZ MSU_SELECTED
+  STZ MSU_SELECTED
   jslb check_if_msu_is_available, $b2
   LDA MSU_AVAILABLE
   beq :+
@@ -196,12 +194,15 @@ initialize_registers:
     jslb check_for_all_tracks_present, $b2
   :
   JSR do_intro
+  LDA NMITIMEN_STATE
+  STA NMITIMEN
+  JSR show_options_screen
   
 intro_done:
   STZ TM      
   STZ TS      
   STZ TMW   
-    LDA #$30
+  LDA #$30
   STA CGWSEL
   STZ CGADSUB
   
@@ -481,6 +482,12 @@ make_the_game_easier:
 
   LDA #$02
   STA $76
+  LDA #99
+  STA $34
+  LDA #$02
+  STA $86
+
+
   rts 
 
   ; LDA #$01
@@ -499,26 +506,31 @@ dma_values:
 
 .if ENABLE_MSU = 1
   .include "msu_intro_screen.asm"
-.endif
-
-.if ENABLE_MSU = 0
+.else
   .include "intro_screen.asm"
 .endif
 
   .include "lifeforce_rewrites.asm"
   .include "scrolling.asm"
-  .include "attributes.asm"
-  .include "hdma_scroll_lookups.asm"
-  .include "2a03_conversion.asm"
-  .include "audio.asm"
-  .include "windows.asm"
-  .include "input.asm"
+  .include "input.asm"  
   .include "konamicode.asm"
+  .include "tiles.asm"
+  .include "windows.asm"
+  .include "hardware-status-switches.asm"
+
+  .include "hdma_scroll_lookups.asm"
+
+.if OLD_2A03 = 0
+  .include "2a03_conversion.asm"
+.else
+  .include "2a03_conversion_v0.asm"
+.endif
+
+  .include "attributes.asm"
+  .include "audio.asm"
   .include "palette_updates.asm"
   .include "palette_lookup.asm"
   .include "sprites.asm"
-  .include "tiles.asm"
-  .include "hardware-status-switches.asm"
 
 
 write_sound_wram_routines:
@@ -538,7 +550,11 @@ BNE :-
 RTS
 
 wram_routines:
-.incbin "wram_routines.bin"
+.if OLD_2A03 = 0
+  .incbin "wram_routines.bin"
+.else
+  .incbin "wram_routines_v0.bin"
+.endif
 
 .segment "PRGA0C"
 fixeda0:

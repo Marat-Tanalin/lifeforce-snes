@@ -48,12 +48,21 @@ return_from_nes_nmi:
     PHX
     PHY
 
+    LDA NMITIMEN_STATE 
+    AND #$7F
+    STA NMITIMEN
+
+    jslb SnesUpdateAudio, $a0
+    
     ; handle sprite traslation last, since if that bleeds out of vblank it's ok
     jslb snes_nmi, $a0
-    jslb convert_audio, $a0
-    
+
     ; jslb msu_nmi_check, $b2
     jslb translate_8_by_16_sprites, $a0
+
+    LDA RDNMI    
+    LDA NMITIMEN_STATE 
+    STA NMITIMEN
 
     PLY
     PLX

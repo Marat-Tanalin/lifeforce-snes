@@ -13,11 +13,23 @@ write_palette_data:
   PHA
 
   setAXY8
-  LDA #$A0
-  
-  PHA
+  PHK
   PLB
-  LDY #$00
+
+  LDA $00
+  PHA
+  LDA $01
+  PHA
+
+  LDA OPTIONS_PALETTE
+  ASL
+  TAY
+  LDA palette_adddresses, Y
+  STA $00
+  LDA palette_adddresses + 1, Y
+  STA $01
+
+  LDX #$00
   STZ CURR_PALETTE_ADDR
   STZ CGADD
 
@@ -26,40 +38,47 @@ write_palette_data:
   ; PALETTE_UPDATE_START contains the first byte of palette data to update.
 palette_entry:
 
-  LDA PALETTE_UPDATE_START, Y
+  LDA PALETTE_UPDATE_START, X
   AND PALETTE_FILTER
   ASL A
-  TAX
-  LDA palette_lookup, X
+  TAY
+  LDA ($00), Y
   STA CGDATA
-  LDA palette_lookup + 1, X
+  INY
+  LDA ($00), Y
   STA CGDATA
 
-  LDA PALETTE_UPDATE_START + 1, Y
+  LDA PALETTE_UPDATE_START + 1, X
   AND PALETTE_FILTER
   ASL A
-  TAX 
-  LDA palette_lookup, X
+  TAY 
+
+  LDA ($00), Y
   STA CGDATA
-  LDA palette_lookup + 1, X
+  INY
+  LDA ($00), Y
   STA CGDATA
 
-  LDA PALETTE_UPDATE_START + 2, Y
+  LDA PALETTE_UPDATE_START + 2, X
   AND PALETTE_FILTER
   ASL A
-  TAX 
-  LDA palette_lookup, X
+  TAY 
+
+  LDA ($00), Y
   STA CGDATA
-  LDA palette_lookup + 1, X
+  INY
+  LDA ($00), Y
   STA CGDATA
 
-  LDA PALETTE_UPDATE_START + 3, Y
+  LDA PALETTE_UPDATE_START + 3, X
   AND PALETTE_FILTER
   ASL A
-  TAX 
-  LDA palette_lookup, X
+  TAY 
+
+  LDA ($00), Y
   STA CGDATA
-  LDA palette_lookup + 1, X
+  INY
+  LDA ($00), Y
   STA CGDATA
 
   LDA CURR_PALETTE_ADDR
@@ -68,14 +87,14 @@ palette_entry:
   STA CGADD
   STA CURR_PALETTE_ADDR
 
-  INY
-  INY
-  INY
-  INY
+  INX
+  INX
+  INX
+  INX
   ; CPY #$10
   ; BNE palette_entry
 
-  TYA
+  TXA
   AND #$0F
   CMP #$00
   BNE skip_writing_four_empties
@@ -88,15 +107,23 @@ palette_entry:
   STA CURR_PALETTE_ADDR 
 
 skip_writing_four_empties:
-  CPY #$20
+  CPX #$20
   BEQ :+
   jmp palette_entry
 :
+
+
   LDA ACTIVE_NES_BANK
   INC A
   ORA #$A0
   PHA
   PLB
+  
+  PLA
+  STA $01
+  PLA 
+  STA $00
+
   PLA
   PLY  
   PLX

@@ -1,6 +1,7 @@
 ; useful build modifications to build with or without things present in the rom
 .define DEBUG_MOD 1
 .define ENABLE_MSU 0
+.define OLD_2A03 1 ; 0 = use updated vers, 1 = use original
 
 ; constants
 LINE_TO_START_HUD = 199
@@ -59,6 +60,17 @@ PALETTE_UPDATE_START = $0840
 PALETTE_ENTRY_CNT   = $08A6
 PALETTE_OFFSET      = $08A7
 PALETTE_FILTER = $083D
+
+MSU_SELECTED        = $084C
+QOL_SETTINGS        = $084D
+
+; 0850 - 085F are used for options
+OPTIONS_START_ADDR   = $0860
+; which options are stored at which address
+OPTIONS_PALETTE         = OPTIONS_START_ADDR
+OPTIONS_LIVES           = OPTIONS_START_ADDR + 1
+OPTIONS_UPGRADE         = OPTIONS_START_ADDR + 2
+OPTIONS_STARTING_LEVEL  = OPTIONS_START_ADDR + 3
 
 REUSABLE_CALC_BYTE  = $08A8
 LEVEL_SELECT_INDEX  = $08A9
@@ -225,6 +237,10 @@ SNES_OAM_SECOND_BLOCK = SNES_OAM_START + $100
 
 WHICH_ATTR_TO_USE_NEXT     = $17D0
 CURR_PALETTE_ADDR   = $17E0
+ATT1                = $17E2
+ATT2                = $17E3
+ATT3                = $17E4
+ATT4                = $17E5
 
 ATTRIBUTE_DMA       = $12F0
 ATTR_DMA_SRC_HB     = $12F2

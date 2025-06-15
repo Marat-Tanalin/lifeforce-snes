@@ -291,3 +291,6 @@ load_intro_tilesets:
     JSL load_chr_table_to_vm
 
     rts
+
+.include "options_screen.asm"
+.include "qol.asm"

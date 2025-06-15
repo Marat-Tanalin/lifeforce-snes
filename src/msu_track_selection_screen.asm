@@ -2,18 +2,18 @@ nsf_track_lookup:
 .byte $00, $01, $0e, $03, $08, $0a, $02, $0f, $10, $04, $09, $07, $06, $05, $0d, $0c
 .byte $11, $13, $14, $12
 
-P0 = $00
-P1 = $04
-P2 = $08
-P3 = $0C
-P4 = $10
-P5 = $14
-P6 = $18
-P7 = $1C
-FIRST_OPTION  = $77
-SECOND_OPTION = $B7 
-NEEDS_OAM_DMA = $11
-CURR_OPTION = $10
+; P0 = $00
+; P1 = $04
+; P2 = $08
+; P3 = $0C
+; P4 = $10
+; P5 = $14
+; P6 = $18
+; P7 = $1C
+; FIRST_OPTION  = $77
+; SECOND_OPTION = $B7 
+; NEEDS_OAM_DMA = $11
+; CURR_OPTION = $10
 
 show_msu_track_screen:
 
@@ -452,78 +452,78 @@ msu_options_sprites:
 .byte $77, $A6, $00, $00   ; 13
 .byte $FF
 
-clear_sprites:
-    LDA #$F0
-    LDY #$00
-:   STA SNES_OAM_START+1, Y
-    INY
-    INY
-    INY
-    INY
-    BNE :-
-    rts
+; clear_sprites:
+;     LDA #$F0
+;     LDY #$00
+; :   STA SNES_OAM_START+1, Y
+;     INY
+;     INY
+;     INY
+;     INY
+;     BNE :-
+;     rts
 
 
-read_input:
-    lda #$01
-    STA JOYSER0
-    STA buttons
-    LSR A
-    sta JOYSER0
-@loop:
-    lda JOYSER0
-    lsr a
-    rol buttons
-    bcc @loop
+; read_input:
+;     lda #$01
+;     STA JOYSER0
+;     STA buttons
+;     LSR A
+;     sta JOYSER0
+; @loop:
+;     lda JOYSER0
+;     lsr a
+;     rol buttons
+;     bcc @loop
 
-    lda buttons
-    ldy JOYPAD1
-    sta JOYPAD1
-    tya
-    eor JOYPAD1
-    and JOYPAD1
-    sta JOYTRIGGER1
-    beq :+ 
+;     lda buttons
+;     ldy JOYPAD1
+;     sta JOYPAD1
+;     tya
+;     eor JOYPAD1
+;     and JOYPAD1
+;     sta JOYTRIGGER1
+;     beq :+ 
 
-    tya
-    and JOYPAD1
-    sta JOYHELD1
-:   rts
+;     tya
+;     and JOYPAD1
+;     sta JOYHELD1
+; :   rts
 
 
-write_option_palette:
-    LDA RDNMI
-:   LDA RDNMI
-    BPL :-
+; write_option_palette:
+;     LDA RDNMI
+; :   LDA RDNMI
+;     BPL :-
 
-    LDA #$41
-    STA CGADD
-    LDX #$80
-    LDY #$00
+;     LDA #$41
+;     STA CGADD
+;     LDX #$80
+;     LDY #$00
 
-:   LDA palette_lookup, Y
-    STA CGDATA
-    INY
-    DEX
-    BNE :-
+; :   LDA palette_lookup, Y
+;     STA CGDATA
+;     INY
+;     DEX
+;     BNE :-
 
-    LDX #$00
-:   
-    LDA sprite_palette_0, X
-    asl
-    TAY
-    LDA palette_lookup, Y
-    STA CGDATA
+;     LDX #$00
+; :   
+;     LDA sprite_palette_0, X
+;     asl
+;     TAY
+;     LDA palette_lookup, Y
+;     STA CGDATA
 
-    INY
-    LDA palette_lookup, Y
-    STA CGDATA
+;     INY
+;     LDA palette_lookup, Y
+;     STA CGDATA
 
-    INX
-    CPX #$03
-    BNE :-
+;     INX
+;     CPX #$03
+;     BNE :-
 
-    RTS
+;     RTS
 
 write_heart_sprite:
     LDY #$00

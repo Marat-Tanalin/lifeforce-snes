@@ -6,7 +6,7 @@ sound_hijack_routine:
   PHK
   PLB
   JSR AUDIO_CODE_LOCATION
-  jslb convert_audio, $a0
+  jslb SnesUpdateAudio, $a0
   PLB
   PLP
   RTS

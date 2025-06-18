@@ -57,7 +57,7 @@ return_from_nes_nmi:
     ; handle sprite traslation last, since if that bleeds out of vblank it's ok
     jslb snes_nmi, $a0
 
-    ; jslb msu_nmi_check, $b2
+    jslb msu_nmi_check, $b2
     jslb translate_8_by_16_sprites, $a0
 
     LDA RDNMI    

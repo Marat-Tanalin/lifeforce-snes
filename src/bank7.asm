@@ -1818,9 +1818,19 @@ LDA #$F0
 .byte $01, $FF, $20, $8B, $F1, $20, $8F, $F1, $20, $A0, $F2, $4C, $27, $FB, $FF, $2C
 .byte $18, $65, $50, $85, $50, $60, $A4, $40, $B9, $0E, $FC, $85, $50, $A9, $00, $85
 .byte $32, $A5, $4E, $D0, $03, $20, $81, $FD, $20, $65, $F1, $20, $B9, $C2, $20, $E7
-.byte $C6, $20, $98, $E6, $A5, $24, $F0, $07, $AD, $02, $20, $0A, $30, $FA, $60, $E6
-.byte $38
+.byte $C6, $20, $98, $E6
+; FC34
+  LDA $24
+  ; this is looking for a sprite 0 hit
+  BEQ :++
+: LDA #$00 ; $2002
+  NOP
+  ASL
+  BMI :-
+  RTS
 
+:
+  INC $38
   LDA #$00 ; $2002
   NOP
   ASL
@@ -1956,6 +1966,9 @@ jsr WriteAPUControl ; STA ApuStatus_4015
 
   PLA
   JSR $E625 ; load sound bank (bank 3)
+
+  ; check if this is an MSU track
+  jslb play_track_hijack, $b2
   JSR $FDAC ; play sound
   JSR $E636 ; return to previous bank
 
@@ -1963,7 +1976,6 @@ jsr WriteAPUControl ; STA ApuStatus_4015
 
 @sound_conversion_point:
   JSR $E663
-  ; jslb SnesUpdateAudio, $a0
   rts
 
 @load_configured_starting_level:
@@ -2000,7 +2012,7 @@ BNE :+
 :
 RTS
 
-repeat $FF, 16
+repeat $FF, 12
 
 ; .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 ; .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF

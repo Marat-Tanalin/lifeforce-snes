@@ -1,4 +1,4 @@
-NUM_OPTIONS = 4
+NUM_OPTIONS = 6
 
 
 ; Toggle current option
@@ -21,6 +21,14 @@ toggle_current_option:
     CMP #3
     BNE :+
     JMP update_level
+:
+    CMP #4
+    BNE :+
+    JMP update_msu1
+:
+    CMP #5
+    BNE :+
+    JMP update_playlist
 :
 RTS
 
@@ -45,6 +53,14 @@ decrement_current_option:
     CMP #3
     BNE :+
     JMP decrement_level
+:
+    CMP #4
+    BNE :+
+    JMP decrement_msu1
+:
+    CMP #5
+    BNE :+
+    JMP decrement_playlist
 :
 RTS
 option_offsets_0:
@@ -167,6 +183,66 @@ update_level:
 	sta SNES_OAM_START + (3 * 4 + 4)	
 	jsr option_3_side_effects
 	rts
+option_offsets_4:
+	.byte $58, $A8
+
+decrement_msu1:
+	dec $0864
+	BPL :+
+		LDA #2
+		DEC A
+		STA $0864
+	:
+	LDA $0864
+	TAY	
+	LDA option_offsets_4, Y
+	sta SNES_OAM_START + (4 * 4 + 4)	
+	jsr option_4_side_effects
+	rts
+
+update_msu1:
+	inc $0864
+	lda $0864
+ 	CMP #2
+	BNE :+	
+		LDA #$00
+	:
+	sta $0864
+	TAY	
+	LDA option_offsets_4, Y
+	sta SNES_OAM_START + (4 * 4 + 4)	
+	jsr option_4_side_effects
+	rts
+option_offsets_5:
+	.byte $58, $78, $98, $B8, $D8
+
+decrement_playlist:
+	dec $0865
+	BPL :+
+		LDA #5
+		DEC A
+		STA $0865
+	:
+	LDA $0865
+	TAY	
+	LDA option_offsets_5, Y
+	sta SNES_OAM_START + (5 * 4 + 4)	
+	jsr option_5_side_effects
+	rts
+
+update_playlist:
+	inc $0865
+	lda $0865
+ 	CMP #5
+	BNE :+	
+		LDA #$00
+	:
+	sta $0865
+	TAY	
+	LDA option_offsets_5, Y
+	sta SNES_OAM_START + (5 * 4 + 4)	
+	jsr option_5_side_effects
+	rts
 
 
 ; Which Option are we on sprites
@@ -175,6 +251,8 @@ option_sprite_y_pos:
 .byte $1F
 .byte $27
 .byte $2F
+.byte $37
+.byte $3F
 ; X, Y, Tile, attributes
 options_sprites:
 .byte  $04, $17, $3B, $42   ; Option Selection
@@ -182,6 +260,8 @@ options_sprites:
 .byte $58, $1F, $3B, $42
 .byte $58, $27, $3B, $42
 .byte $58, $2F, $3B, $42
+.byte $58, $37, $3B, $42
+.byte $58, $3F, $3B, $42
 
 	.byte 120, 184, $B0, $40 ; tank sprite 1/6
 	.byte 128, 184, $A0, $40 ; tank sprite 2/6

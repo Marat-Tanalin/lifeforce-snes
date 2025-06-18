@@ -18,9 +18,9 @@
 
 ; game specific flags, needs to be updated
 .DEFINE NSF_STOP        #$00
-.DEFINE NSF_PAUSE       #$FD ; 
+.DEFINE NSF_PAUSE       #$FF ; 
 .DEFINE NSF_RESUME      #$FF ; 
-.DEFINE NSF_MUTE        #$00
+.DEFINE NSF_MUTE        #$47
 
 ; this duplicates the logic that we normally execute when
 ; 0 is set as the song to play.
@@ -41,15 +41,10 @@ double_dragon_2_mute_nsf_copy:
 
 
 play_track_hijack:
-    STA $07FF
-    bne :+
-    ; 00 is no sound, and the game takes care of stopping
-    ; so we can return.  We'll also return 00 if we're going to play
-    ; msu-1
-      rtl
-  :
+
     PHA
     jsl msu_check
+    CMP NSF_MUTE
     BEQ :+
     ; non-0 value returned from MSU-check, we're not playing MSU
     ; either it's not a music track or we don't have it.
@@ -61,8 +56,6 @@ play_track_hijack:
 ;   00 returned from msu_check, mute nsf and return the mute value
     PLA
     LDA NSF_MUTE
-    STA $07FF
-
     rtl
 
 
@@ -285,7 +278,14 @@ msu_available:
   STA MSU_PLAYING		; set mute NSF flag (writing 02 in RAM location)
 
   pla
+
   STA MSU_TRACK_IDX		; store current re-mapped nsf track-id for later retrieval
+  LDA OPTIONS_MSU_PLAYLIST
+  ASL
+  ASL
+  ASL
+  ASL
+  ORA MSU_TRACK_IDX
   STA MSU_TRACK		    ; store current valid NSF track-ID
   stz MSU_TRACK + 1	    ; must zero out high byte or current msu-1 track will not play !!!
 
@@ -304,7 +304,8 @@ msu_available:
 
 msu_nmi_check:
 
-  jsr decrement_timer_if_needed
+  ; no timers in LifeForce, so we can skip that logic
+  ; jsr decrement_timer_if_needed
   
   LDA MSU_TRIGGER
   BEQ :-
@@ -327,7 +328,7 @@ msu_nmi_check:
   STA MSU_VOLUME		; write max volume value
   STA MSU_CURR_VOLUME
   
-  jsr set_timer_if_needed
+  ; jsr set_timer_if_needed
   PLB
   RTL
 
@@ -443,13 +444,25 @@ decrement_timer_if_needed:
   rts
 ; this 0x100 byte lookup table maps the NSF track to the MSU-1 track
 ; MSU Index - NES value - track
+; 
+;  1 - 25 - Level 1
+;  2 - 28 - Level 2
+;  3 - 2B - Level 3
+;  4 - 2E - Level 4
+;  5 - 31 - Level 5
+;  6 - 37 - Level 6
+;  7 - 3A - Boss
+;  8 - 3D - Death
+;  9 - 40 - Ending
+; 10 - 22 - Level 5 Mini Boss
+; 11 - 34 - Level 5b
 
 msu_track_lookup:
-.byte $FF, $00, $05, $02, $08, $0C, $0B, $0A, $03, $09, $04, $FF, $0E, $0D, $01, $06
-.byte $07, $0F, $12, $10, $11, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-.byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+.byte $FF, $FF, $0A, $FF, $FF, $01, $FF, $FF, $02, $FF, $FF, $03, $FF, $FF, $04, $FF
+.byte $FF, $05, $FF, $FF, $0B, $FF, $FF, $06, $FF, $FF, $07, $FF, $FF, $08, $FF, $FF
+.byte $09, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
@@ -464,11 +477,11 @@ msu_track_lookup:
 
 ; this 0x100 byte lookup table maps the NSF track to the if it loops ($03) or no ($01)
 msu_track_loops:
-.byte $03, $03, $03, $03, $01, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03
-.byte $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $03, $03, $03, $03, $03, $03, $03, $01, $03, $03, $00, $00, $00, $00, $00
+.byte $00, $03, $03, $03, $03, $03, $03, $03, $01, $03, $03, $00, $00, $00, $00, $00
+.byte $00, $03, $03, $03, $03, $03, $03, $03, $01, $03, $03, $00, $00, $00, $00, $00
+.byte $00, $03, $03, $03, $03, $03, $03, $03, $01, $03, $03, $00, $00, $00, $00, $00
+.byte $00, $03, $03, $03, $03, $03, $03, $03, $01, $03, $03, $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -483,11 +496,11 @@ msu_track_loops:
 
 ; this 0x100 byte lookup table maps the NSF track to the MSU-1 volume ($FF is max, $4F is half)
 msu_track_volume:
-.byte $b5, $b5, $b6, $d5, $d4, $b5, $b5, $b5, $b6, $b6, $b5, $b5, $b5, $eb, $c1, $bc
-.byte $B5, $B5, $B8, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F
-.byte $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F
-.byte $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F
-.byte $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F
+.byte $4F, $b5, $b6, $d5, $d4, $b5, $b5, $b5, $b6, $b6, $b5, $4F, $4F, $4F, $4F, $4F
+.byte $4F, $b5, $b6, $d5, $d4, $b5, $b5, $b5, $b6, $b6, $b5, $4F, $4F, $4F, $4F, $4F
+.byte $4F, $b5, $b6, $d5, $d4, $b5, $b5, $b5, $b6, $b6, $b5, $4F, $4F, $4F, $4F, $4F
+.byte $4F, $b5, $b6, $d5, $d4, $b5, $b5, $b5, $b6, $b6, $b5, $4F, $4F, $4F, $4F, $4F
+.byte $4F, $b5, $b6, $d5, $d4, $b5, $b5, $b5, $b6, $b6, $b5, $4F, $4F, $4F, $4F, $4F
 .byte $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F
 .byte $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F
 .byte $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F
@@ -509,7 +522,7 @@ track_timers:
 .addr no_timer            ; 
 .addr no_timer            ; 
 .addr no_timer            ; 
-.addr end_of_level_timer  ; 04 - Level Clear
+.addr no_timer  ; 04 - Level Clear
 .addr no_timer            ; 
 .addr no_timer            ; 
 .addr no_timer            ; 
@@ -524,7 +537,7 @@ track_timers:
 
 .addr no_timer            ; 
 .addr no_timer            ; 
-.addr game_over_timer     ; 
+.addr no_timer     ; 
 
 no_timer:
 .word $0000               ; 

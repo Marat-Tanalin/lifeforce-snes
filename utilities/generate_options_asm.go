@@ -181,7 +181,9 @@ func main() {
         {Index: 0, Name: "PALETTE", Values: []string{"A", "B", "C", "D", "E", "F", "G", "H"}},
         {Index: 1, Name: "LIVES", Values: []string{"3", "10", "30", "99"}},
         {Index: 2, Name: "UPGRADES", Values: []string{"LOSE", "PERSIST"}},
-        {Index: 3, Name: "LEVEL", Values: []string{"1", "2", "3", "4", "5", "6"}},
+        {Index: 3, Name: "LEVEL", Values: []string{"1", "2", "3", "4", "5", "6"}},		
+        {Index: 4, Name: "MSU1", Values: []string{"ON","OFF"}},
+		{Index: 5, Name: "PLAYLIST", Values: []string{"RCK","VRC","SYT","ARC","X68"}},
     }
 	outAsmFile.WriteString(fmt.Sprintf("NUM_OPTIONS = %d\n", len(options)))
 	write_toggle_current_option(options, outAsmFile)

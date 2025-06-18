@@ -236,7 +236,7 @@ intro_done:
     ; jslb calculate_hdma_l, $a0
 
     JSR check_and_copy_nes_attributes_to_buffer
-
+    jsr check_for_palette_swap
     ; JSR dma_oam_table
     RTL
 
@@ -478,6 +478,38 @@ msu_movie_rti:
   PLP
   RTI
 
+check_for_palette_swap:
+  LDA $24 ; check that we're paused
+  BEQ :+
+
+  LDA $F5
+  AND #$20
+  BEQ :+
+
+  STZ NMITIMEN
+
+  jsr wait_for_vblank
+
+  INC OPTIONS_PALETTE
+  LDA OPTIONS_PALETTE
+  AND #$07
+  STA OPTIONS_PALETTE
+  LDA #$80
+  STA VMAIN
+  jslb write_palette_data, $a0
+  LDA VMAIN_STATE
+  STA VMAIN
+  LDA RDNMI
+  LDA NMITIMEN_STATE
+  STA NMITIMEN
+: rts
+
+wait_for_vblank:
+  LDA RDNMI
+  AND #$80
+  BEQ wait_for_vblank
+  RTS
+
 make_the_game_easier:
 
   LDA #$02
@@ -504,12 +536,7 @@ make_the_game_easier:
 dma_values:
   .byte $00, $12
 
-.if ENABLE_MSU = 1
-  .include "msu_intro_screen.asm"
-.else
   .include "intro_screen.asm"
-.endif
-
   .include "lifeforce_rewrites.asm"
   .include "scrolling.asm"
   .include "input.asm"  

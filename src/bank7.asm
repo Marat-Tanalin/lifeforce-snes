@@ -274,7 +274,7 @@
 .byte $78
 
 ; reset player equipment
- JSR @maybe_reset_player_equipment ; $C6C4
+ JSR $C6C4
 
 
 .byte $A9, $01, $95, $70, $60, $B5, $F5, $29, $80, $F0, $15, $86
@@ -329,20 +329,20 @@
 ; player death weapon reset
 ; C6C4
  LDA #$00
- STA $76,X
- STA $7A,X
- STA $80,X
- STA $82,X
- STA $86,X
- STA $8A,X
- STA $88,X
+ STA $76,X  ; weapon
+ STA $7A,X  ; movement
+ STA $80,X  ; Speed
+ STA $82,X  ; Shield
+ STA $86,X  ; Missiles
+ STA $8A,X  ; Options - not resetting this causes some issues because they're dead
+ STA $88,X  ; ?
 
  LDA #$00
- STA $032F,X
- STA $72,X
- STA $0350,X
- STA $74,X
- STA $7C,X
+ STA $032F,X ; Player Y Position
+ STA $72,X   ; ?
+ STA $0350,X ; Player X Position
+ STA $74,X   ; ?
+ STA $7C,X   
  STA $7E,X
  STA $84,X
  RTS
@@ -792,7 +792,18 @@
 .byte $38, $E5, $04, $85, $02, $85, $04, $A5, $03, $E5, $05, $85, $03, $A0, $00, $A5
 .byte $03, $10, $01, $88, $84, $0A, $A4, $09, $88, $30, $08, $46, $0A, $6A, $66, $04
 .byte $4C, $18, $DE, $85, $05, $A5, $00, $18, $65, $04, $85, $00, $A5, $01, $65, $05
-.byte $85, $01, $60, $A9, $01, $8D, $DA, $06, $A9, $3A, $8D, $DE, $06, $60, $18, $65
+.byte $85, $01, $60
+
+; DE33 - kick off a fade
+jslb queue_fade_of_boss_music, $a0
+nops 6
+; LDA #$01
+; STA $06DA
+; LDA #$3A
+; STA $06DE
+RTS
+
+.byte $18, $65
 .byte $FC, $B0, $04, $C9, $F0, $90, $02, $69, $0F, $85, $58, $98, $18, $65, $FD, $85
 .byte $59, $A5, $FF, $90, $02, $49, $01, $29, $01, $85, $5A, $60, $84, $08, $85, $09
 .byte $A5, $58, $38, $E5, $08, $90, $04, $C9, $F0, $90, $03, $38, $E9, $10, $85, $FC
@@ -1495,12 +1506,33 @@ STA $36
 STA $37
 RTS
 
-.byte $A2, $60, $D0, $02, $A2, $30, $20, $C3, $E8, $95
-.byte $00, $E8, $E0, $F0, $D0, $F9, $A2, $07, $A0, $03, $84, $01, $A9, $00, $85, $00
+.byte $A2, $60, $D0, $02
 
+;EEEA - reset starting variables
+; LDX #$30
+; JSR $E8C3
+; : STA $00,X
+; INX
+; CPX #$F0
+; BNE :-
+jslb reset_starting_vars, $a0
+nops 8
+LDX #$07
+LDY #$03
+STY $01
+LDA #$00
+STA $00
+LDY #$00
 
-; EF00 - bank 7
-.byte $A0, $00, $91, $00, $C8, $D0, $FB, $E6, $01, $E4, $01, $D0, $F5, $4C, $93, $E8
+: STA ($00),Y
+  INY
+  BNE :-
+  INC $01
+  CPX $01
+  BNE :-
+JMP $E893
+
+;EF10
 .byte $A0, $00, $98, $99, $00, $05, $C8, $D0, $FA, $60, $0A, $84, $02, $A8, $C8, $68
 .byte $85, $00, $68, $85, $01, $B1, $00, $85, $03, $C8, $B1, $00, $85, $01, $A5, $03
 .byte $85, $00, $A4, $02, $6C, $00, $00, $18, $75, $00, $95, $00, $90, $02, $F6, $01
@@ -1864,9 +1896,39 @@ LDA #$F0
 .byte $A2, $14, $20, $CA, $E6, $A2, $16, $20, $CA, $E6, $A9, $00, $85, $60, $4C, $BA
 .byte $E6, $20, $C2, $E6, $A5, $60, $F0, $18, $20, $5A, $E6, $20, $4D, $EF, $20, $BA
 .byte $C6, $A2, $02, $A9, $00, $95, $90, $95, $93, $CA, $10, $F9, $A9, $00, $85, $2C
-.byte $60, $A5, $1C, $05, $25, $05, $20, $D0, $20, $A5, $F5, $A4, $24, $D0, $0D, $29
-.byte $10, $F0, $16, $A9, $01, $85, $24, $A9, $46, $4C, $42, $E6, $20, $1C, $CE, $A5
-.byte $F5, $29, $10, $F0, $04, $A9, $00, $85, $24, $60, $80, $A6, $8D, $E0, $06, $F0
+.byte $60
+
+; FD81 - pause check
+  LDA $1C
+  ORA $25
+  ORA $20
+  BNE :++
+  LDA $F5
+  LDY $24
+  BNE :+
+  AND #$10
+  BEQ :++
+
+  ; set 
+  ; LDA #$01
+  ; STA $24
+  jslb set_pause, $a0
+
+  LDA #$46
+  JMP $E642
+: JSR $CE1C
+  LDA $F5
+  AND #$10
+  BEQ :+
+
+  ; LDA #$00
+  ; STA $24
+  jslb un_pause, $a0
+  
+: RTS
+
+
+.byte $80, $A6, $8D, $E0, $06, $F0
 .byte $04, $C9, $47, $D0, $03, $4C, $FE, $FE, $A9, $43, $CD, $4F, $06, $F0, $53, $AD
 .byte $EC, $06, $D0, $05, $AD, $ED, $06, $F0, $0E, $AD, $E0, $06, $C9, $46, $F0, $51
 .byte $C9, $03, $90, $4D, $4C, $12, $FE, $A9, $00, $85, $EA, $AD, $E0, $06, $C9, $3A
@@ -2005,14 +2067,7 @@ BEQ :+
 
 rts
 
-@maybe_reset_player_equipment:
-LDA OPTIONS_UPGRADE
-BNE :+
-  JSR $C6C4
-:
-RTS
-
-repeat $FF, 12
+repeat $FF, 21
 
 ; .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 ; .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF

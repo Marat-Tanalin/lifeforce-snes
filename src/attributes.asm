@@ -15,18 +15,7 @@ check_and_copy_attribute_buffer:
   LDA ATTRIBUTE_DMA
   BEQ :+
   JSR copy_prepped_attributes_to_vram
-: 
-;   LDA ATTRIBUTE2_DMA
-;   BEQ :+  
-;   JSR copy_prepped_attributes2_to_vram
-; : 
-;   LDA COLUMN_1_DMA
-;   BEQ :+
-;   JSR dma_column_attributes
-; : LDA COLUMN_2_DMA
-;   BEQ :+
-;   JSR dma_column2_attributes
-; : 
+  
   RTS
 
 copy_single_prepped_attribute:

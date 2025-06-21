@@ -16,7 +16,8 @@ var charToTile = map[rune]byte{
     'K': 0x24, 'L': 0x25, 'M': 0x26, 'N': 0x27, 'O': 0x28,
     'P': 0x29, 'Q': 0x2A, 'R': 0x2B, 'S': 0x2C, 'T': 0x2D,
     'U': 0x2E, 'V': 0x2F, 'W': 0x30, 'X': 0x31, 'Y': 0x32,
-    'Z': 0x33,
+    'Z': 0x33, ' ': 0x34, '.': 0x35, '-': 0x36, '=': 0x37, 
+	'?': 0x38, '!': 0x39,
 }
 
 type Option struct {
@@ -26,34 +27,59 @@ type Option struct {
 }
 
 const update_option_asm_template =`
-decrement_{option_name}:
+decrement_{option_name_lower}:
 	dec {wram_address}
 	BPL :+
 		LDA #{num_values}
 		DEC A
 		STA {wram_address}
 	:
-	LDA {wram_address}
-	TAY	
-	LDA option_offsets_{index}, Y
-	sta SNES_OAM_START + ({index} * 4 + 4)	
-	jsr option_{index}_side_effects
-	rts
+	BRA update_{option_name_lower}
 
-update_{option_name}:
+increment_{option_name_lower}:
 	inc {wram_address}
 	lda {wram_address}
  	CMP #{num_values}
 	BNE :+	
 		LDA #$00
 	:
-	sta {wram_address}
-	TAY	
-	LDA option_offsets_{index}, Y
-	sta SNES_OAM_START + ({index} * 4 + 4)	
+	STA {wram_address}
+	BRA update_{option_name_lower}
+
+update_{option_name_lower}:
+	LDA RDNMI
+:	LDA RDNMI
+	BPL :-
+
+	LDA {wram_address}
+	ASL
+	ASL
+	ASL
+	ASL
+	ASL
+	TAY
+	LDA #{option_vmaddh}
+	STA VMADDH
+
+	LDA #{option_vmaddl}
+	STA VMADDL
+
+	LDX #$00
+:	LDA option_{option_name_lower}_choice_tiles, Y
+	STA VMDATAH
+	LDA option_{option_name_lower}_choice_tiles + 1, Y
+	STA VMDATAL
+	INX
+	INY
+	INY
+	CPX #$10
+	BNE :-
+
 	jsr option_{index}_side_effects
 	rts
+
 `
+
 
 func generate_options(index int, name string, values []string, outFile *os.File, outAsmFile *os.File) {
 	generate_options_tiles(index, name, values, outFile, outAsmFile)
@@ -61,38 +87,64 @@ func generate_options(index int, name string, values []string, outFile *os.File,
 
 	option_asm :=  strings.ReplaceAll(update_option_asm_template, "{wram_address}", fmt.Sprintf("$%04X", startingOptionAddress + index))
  	option_asm = strings.ReplaceAll(option_asm, "{num_values}", fmt.Sprintf("%d", len(values)))
-  	option_asm = strings.ReplaceAll(option_asm, "{index}", fmt.Sprintf("%d", index))
-	option_asm = strings.ReplaceAll(option_asm, "{option_name}", strings.ToLower(name))
+  	option_asm = strings.ReplaceAll(option_asm, "{index}", fmt.Sprintf("%d", index))	
+	option_asm = strings.ReplaceAll(option_asm, "{option_name}", name)
+	option_asm = strings.ReplaceAll(option_asm, "{option_name_lower}", strings.ToLower(name))
+
+	option_vm_add := startingAddress + index * 0x20 + 0x0A
+	option_asm = strings.ReplaceAll(option_asm, "{option_vmaddh}", fmt.Sprintf("$%02X", byte(option_vm_add >> 8 & 0xFF)))
+ 	option_asm = strings.ReplaceAll(option_asm, "{option_vmaddl}", fmt.Sprintf("$%02X", byte(option_vm_add & 0xFF)))
   	outAsmFile.WriteString(option_asm)
 }
 
 func generate_options_tiles(index int, name string, values []string, outFile *os.File, outAsmFile *os.File) {
 
+	// .word $2000 ; address on screen
+	// .byte $03  ; length of option name
+	// .byte $18, $1A, $1B ; tiles for option name
+	// each option will be 16 tiles long, we'll pad with spaces
+
+	// option_x:
+	// $2080, 3, MSU
+	// option_x_choice_tiles:
+	// _______ABC________ ; 16 tiles
+	// _______DEF________ ; 16 tiles
+	// FFFFFFFFFFFFFFFFFF ; end of coices	
 	optionAddress := startingAddress + index * 0x20
 	outFile.Write([]byte{byte(optionAddress & 0xFF), byte(optionAddress >> 8 & 0xFF)})
 	outFile.Write([]byte{byte(len(name))})
 	outFile.Write(convertStringToTiles(name))
-	// we have 20 tiles to fit options.  let's space them out evenly
-	option_offset := int(20 / len(values))
+	outAsmFile.WriteString(fmt.Sprintf("option_%s_choice_tiles:\n", strings.ToLower(name)))
 
-	outAsmFile.WriteString(fmt.Sprintf("option_offsets_%d:\n\t.byte ", index))
-	for idx, value := range values {
-		choiceAddress := 88 + (option_offset * 8) * idx	
-			
-		outAsmFile.WriteString(fmt.Sprintf("$%02X", choiceAddress))
-		if idx < len(values) - 1 {
-   			outAsmFile.WriteString(", ")	
-		} else {
-	  		outAsmFile.WriteString("\n")	
-		}
-		optionChoiceAddress := optionAddress + 10 + (idx * option_offset)
-		outFile.Write([]byte{byte(optionChoiceAddress & 0xFF), byte(optionChoiceAddress >> 8 & 0xFF)})
-		outFile.Write([]byte{byte(len(value))})
-		outFile.Write(convertStringToTiles(value))
+	for _, value := range values {
+
+		valueBytes := convertStringToTiles(formatStringTo16Chars(value))
+		outAsmFile.WriteString(".byte ")
+		for i, b := range valueBytes {
+   			outAsmFile.WriteString(fmt.Sprintf("$%02X", b))
+	   		if i != len(valueBytes) - 1 {
+	 			outAsmFile.WriteString(", ")
+			}
+		  }
+		outAsmFile.WriteString("\n")
 	}	
 	
 
 	return
+}
+
+func formatStringTo16Chars(input string) string {
+    // Convert the string to uppercase
+    upper := strings.ToUpper(input)
+
+    // Calculate padding needed
+    totalLength := 16
+    padding := totalLength - len(upper)
+    leftPadding := padding / 2
+    rightPadding := padding - leftPadding
+
+    // Add spaces to the left and right
+    return strings.Repeat(" ", leftPadding) + upper + strings.Repeat(" ", rightPadding)
 }
 
 func convertStringToTiles(name string) []byte {
@@ -115,9 +167,6 @@ outAsmFile.WriteString("\n\n; Which Option are we on sprites\n")
  outAsmFile.WriteString("; X, Y, Tile, attributes\n")
  outAsmFile.WriteString("options_sprites:\n")
  outAsmFile.WriteString(".byte  $04, $17, $3B, $42   ; Option Selection\n") 
- for _, option := range options {
-  outAsmFile.WriteString(fmt.Sprintf(".byte $58, $%02X, $3B, $42\n", 0x17 + option.Index * 0x08))
- }
 
 	//  we also have some sprites for the palette previews
 	palette_preview_sprites := `
@@ -148,7 +197,7 @@ func write_toggle_current_option(options []Option, outAsmFile *os.File) {
 	for _, option := range options {
 	outAsmFile.WriteString(fmt.Sprintf("    CMP #%d\n", option.Index))
 	outAsmFile.WriteString(fmt.Sprintf("    BNE :+\n"))
-	outAsmFile.WriteString(fmt.Sprintf("    JMP update_%s\n", strings.ToLower(option.Name)))
+	outAsmFile.WriteString(fmt.Sprintf("    JMP increment_%s\n", strings.ToLower(option.Name)))
 	outAsmFile.WriteString(":\n")
 	}
 	outAsmFile.WriteString("RTS\n")
@@ -169,6 +218,14 @@ func write_decrement_current_option(options []Option, outAsmFile *os.File) {
 	outAsmFile.WriteString(":\n")
 	}
 	outAsmFile.WriteString("RTS\n")
+
+	
+	outAsmFile.WriteString("\n")
+	outAsmFile.WriteString("initialize_options:\n")
+	for _, option := range options {
+		 outAsmFile.WriteString(fmt.Sprintf("   jsr update_%s\n", strings.ToLower(option.Name)))
+	}
+	outAsmFile.WriteString("    rts\n\n")
 }
 
 func main() {
@@ -178,12 +235,13 @@ func main() {
 	var outAsmFile, _ = os.Create("options_macro_defs.asm")
  	defer outAsmFile.Close()
 	 options := []Option{
-        {Index: 0, Name: "PALETTE", Values: []string{"A", "B", "C", "D", "E", "F", "G", "H"}},
+        {Index: 0, Name: "PALETTE", Values: []string{"NES", "FCEUX", "GREYSCALE", "NES CLASSIC FBX", "PVM", "REAL", "SMOOTH Y2 FBX", "APPLE II"}},
         {Index: 1, Name: "LIVES", Values: []string{"3", "10", "30", "99"}},
-        {Index: 2, Name: "UPGRADES", Values: []string{"LOSE", "PERSIST"}},
-        {Index: 3, Name: "LEVEL", Values: []string{"1", "2", "3", "4", "5", "6"}},		
-        {Index: 4, Name: "MSU1", Values: []string{"ON","OFF"}},
-		{Index: 5, Name: "PLAYLIST", Values: []string{"RCK","VRC","SYT","ARC","X68"}},
+        // {Index: 2, Name: "UPGRADES", Values: []string{"LOSE ON DEATH", "KEEP ON DEATH"}},
+        {Index: 2, Name: "LEVEL", Values: []string{"1", "2", "3", "4", "5", "6"}},		
+        {Index: 3, Name: "MSU1", Values: []string{"ON","OFF"}},
+		{Index: 4, Name: "PLAYLIST", Values: []string{"ROCK AST","VRC6 COVER","SYNTH","ARCADE","X68000"}},
+		{Index: 5, Name: "DIFFICULTY", Values: []string{"EASY", "NORMAL", "HARD"}},
     }
 	outAsmFile.WriteString(fmt.Sprintf("NUM_OPTIONS = %d\n", len(options)))
 	write_toggle_current_option(options, outAsmFile)

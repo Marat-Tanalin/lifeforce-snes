@@ -193,11 +193,11 @@ initialize_registers:
     STA MSU_SELECTED
     jslb check_for_all_tracks_present, $b2
   :
-  JSR do_intro
-  LDA NMITIMEN_STATE
-  STA NMITIMEN
-  JSR show_options_screen
+  jslb do_intro, $b1
   
+  PHK
+  PLB
+
 intro_done:
   STZ TM      
   STZ TS      
@@ -237,6 +237,7 @@ intro_done:
 
     JSR check_and_copy_nes_attributes_to_buffer
     jsr check_for_palette_swap
+    
     ; JSR dma_oam_table
     RTL
 
@@ -536,11 +537,10 @@ make_the_game_easier:
 dma_values:
   .byte $00, $12
 
-  .include "intro_screen.asm"
   .include "lifeforce_rewrites.asm"
   .include "scrolling.asm"
   .include "input.asm"  
-  .include "konamicode.asm"
+  ; .include "konamicode.asm"
   .include "tiles.asm"
   .include "windows.asm"
   .include "hardware-status-switches.asm"
@@ -554,7 +554,6 @@ dma_values:
 .endif
 
   .include "attributes.asm"
-  .include "audio.asm"
   .include "palette_updates.asm"
   .include "palette_lookup.asm"
   .include "sprites.asm"

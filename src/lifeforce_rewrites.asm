@@ -1,3 +1,30 @@
+
+
+
+
+; rewrite de33
+queue_fade_of_boss_music:
+  LDA #$01
+  STA $06DA
+  LDA #$3A
+  jslb queue_fade_to_next_track, $b2
+  STA $06DE
+  RTL
+
+; rewrite of eeea - reseting starting variables
+reset_starting_vars:
+  LDX #$30
+  JSR $E8C3
+  : STA $00,X
+  INX
+  CPX #$F0
+  BNE :-
+
+  LDA OPTIONS_DIFFICULTY
+  STA $31
+
+  rtl
+
 ; rewrite of logic from C053
 :
     LDA #$FF
@@ -739,6 +766,17 @@ load_title_screen_attributes:
   
   rts
 
+set_pause:
+  LDA #$01
+  STA $24
+  jslb pause_msu_only, $b2
+  rtl
+
+un_pause:
+  LDA #$00
+  STA $24
+  jslb resume_msu_only, $b2
+  rtl
 
 attribute_values:
 .byte <(clear_screen), >(clear_screen)

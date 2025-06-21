@@ -46,6 +46,7 @@
 .include "msu.asm"
 ; .include "chrom-tiles-msu-intro.asm"
 ; .include "msu_video_player.asm"
+  .include "intro_screen.asm"
 
 .if OLD_2A03 = 0
     .include "dpcm_audio.asm"

@@ -84,7 +84,7 @@ show_options_screen:
     STA VMAIN
     LDA #$80
     STA INIDISP
-    JSR clearvm
+    jslb clearvm_jsl, $a0
 
     LDA #$00
     STA CHR_BANK_BANK_TO_LOAD
@@ -104,11 +104,14 @@ show_options_screen:
 ;     INC MSU_UNAVAILABLE
 ; :   
     JSR write_option_tiles
-    JSR write_option_palette
-    JSR write_option_palette_from_indexes
+    jslb write_option_palette, $a0
+    jslb write_option_palette_from_indexes, $a0
+        PHK
+    PLB
     JSR load_options_sprites
     jsr write_single_color_tiles_to_3000
-    JSR dma_oam_table
+    jsr initialize_options
+    jslb dma_oam_table_long, $a0
     LDA #$0F
     STA INIDISP
     LDX #$FF
@@ -121,7 +124,7 @@ input_loop:
     BPL :+
     LDA NEEDS_OAM_DMA
     BEQ :+
-    JSR dma_oam_table
+    jslb dma_oam_table_long, $a0
     
     STZ NEEDS_OAM_DMA
 :   
@@ -163,6 +166,16 @@ input_loop:
     JMP show_options_screen
 
 exit_options:
+    ; stop msu1
+    LDA RDNMI
+    : LDA RDNMI
+    BPL :-
+    STZ $2007
+    STZ MSU_CURR_CTRL    
+    STZ MSU_PLAYING
+    STZ CURRENT_NSF
+    jslb msu_nmi_check, $b2
+
     jsr clear_extra_palattes
     LDA #$FF
     LDY #$00
@@ -238,96 +251,6 @@ update_option_pos:
 
 .include "options_macro_defs.asm"
 
-write_option_palette:
-    LDA RDNMI
-:   LDA RDNMI
-    BPL :-
-
-    LDA OPTIONS_PALETTE
-    ASL
-    TAY
-    LDA palette_adddresses, Y
-    STA $00
-    INY
-    LDA palette_adddresses, Y
-    STA $01
-    
-    LDY #$00
-
-    LDA #$41
-    STA CGADD
-    LDX #$80
-    LDY #$00
-
-:   LDA ($00), Y
-    STA CGDATA
-    INY
-    DEX
-    BNE :-
-
-    RTS
-
-write_option_palette_from_indexes:
-    LDA RDNMI
-:   LDA RDNMI
-    BPL :-
-
-    STZ CGADD
-    LDY #$00
-    LDX #$00
-
-    LDA OPTIONS_PALETTE
-    ASL
-    TAY
-    LDA palette_adddresses, Y
-    STA $00
-    INY
-    LDA palette_adddresses, Y
-    STA $01
-    
-    LDY #$00
-    
-option_palette_loop:
-    LDA default_options_bg_palette_indexes, X
-    ASL A
-    TAY
-
-    LDA ($00), Y
-    STA CGDATA
-    INY
-
-    LDA ($00), Y
-    STA CGDATA    
-    INY
-
-    ; every 4 we need to write a bunch of empty palette entries
-    INX
-    TXA
-    AND #$03
-    BNE :+
-
-    CLC
-    LDA CURR_PALETTE_ADDR
-    ADC #$10
-    STA CGADD
-    STA CURR_PALETTE_ADDR
-
-:
-    TXA
-    AND #$0F
-    CMP #$00
-    BNE :+
-    ; after 16 entries we write an empty set of palettes
-    CLC
-    LDA CURR_PALETTE_ADDR
-    ADC #$40
-    STA CGADD
-    STA CURR_PALETTE_ADDR 
-
-:
-    CPX #$20
-    BNE option_palette_loop
-    rts    
 
 write_option_tiles:
     setXY16
@@ -435,12 +358,21 @@ write_single_color_tiles_to_3000:
 
 ; override these if changing an option needs to have side efffects
 option_0_side_effects:
-    jsr write_option_palette_from_indexes
-    jsr write_option_palette
+    jslb write_option_palette_from_indexes, $a0
+    jslb write_option_palette, $a0
+        PHK
+    PLB
     rts
 
 
-option_5_side_effects:
+option_3_side_effects:
+    LDA OPTIONS_MSU_SELECTED
+    EOR #$01
+    STA MSU_SELECTED
+
+    ; fall through to option 5 side effects
+
+option_4_side_effects:
 
     LDA RDNMI
     : LDA RDNMI
@@ -461,40 +393,12 @@ option_5_side_effects:
 
 option_1_side_effects:
 option_2_side_effects: 
-option_3_side_effects:
-option_4_side_effects:
+option_5_side_effects:
 option_6_side_effects:
 option_7_side_effects:
 option_8_side_effects:
 option_9_side_effects:
     rts
-
-
-default_options_bg_palette_indexes:
-.byte $0F, $07, $00, $01, $0F, $02, $01, $1C, $0F, $0A, $18, $28, $0F, $17, $19, $10
-
-default_options_sprite_palette_indexes:
-.byte $0F, $30, $15, $0F, $0F, $30, $00, $0F, $0F, $3B, $1B, $0F, $0F, $06, $16, $38
-
-default_options_palette:
-.byte $00, $00, $FF, $7F, $74, $64, $42, $50, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $F7, $02, $33, $01, $6A, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $29, $6F, $07, $02, $A0, $44, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $BF, $65, $8C, $31, $76, $3C, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-
-options_sprite_palette:
-.byte $00, $00, $FF, $7F, $1F, $3A, $6A, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $78, $7F, $42, $50, $76, $3C, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $08, $7D, $D8, $7D, $78, $7F, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $0D, $00, $D6, $10, $9C, $4B, $00, $00, $00, $00, $00, $00, $00, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 
 
 ; 16 4bpp tiles that use all of a single color

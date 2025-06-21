@@ -168,6 +168,10 @@ snes_sprite_palatte:
 .byte $00, $00, $FF, $7F, $B5, $56, $29, $25, $00, $00, $00, $00, $00, $00, $00, $00
 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 
+write_default_palettes_jsl:
+  jsr write_default_palettes
+  rtl
+
 write_default_palettes:
   STZ CGADD
   sta CGADD
@@ -202,3 +206,128 @@ store_nes_color_in_palette:
 
   PLX
   RTL
+
+
+
+write_option_palette:
+    PHK
+    PLB
+    LDA RDNMI
+:   LDA RDNMI
+    BPL :-
+
+    LDA OPTIONS_PALETTE
+    ASL
+    TAY
+    LDA palette_adddresses, Y
+    STA $00
+    INY
+    LDA palette_adddresses, Y
+    STA $01
+    
+    LDY #$00
+
+    LDA #$41
+    STA CGADD
+    LDX #$80
+    LDY #$00
+
+:   LDA ($00), Y
+    STA CGDATA
+    INY
+    DEX
+    BNE :-
+
+    RTL
+
+write_option_palette_from_indexes:
+    PHK
+    PLB
+    LDA RDNMI
+:   LDA RDNMI
+    BPL :-
+
+    STZ CGADD
+    LDY #$00
+    LDX #$00
+
+    LDA OPTIONS_PALETTE
+    ASL
+    TAY
+    LDA palette_adddresses, Y
+    STA $00
+    INY
+    LDA palette_adddresses, Y
+    STA $01
+    
+    LDY #$00
+    
+option_palette_loop:
+    LDA default_options_bg_palette_indexes, X
+    ASL A
+    TAY
+
+    LDA ($00), Y
+    STA CGDATA
+    INY
+
+    LDA ($00), Y
+    STA CGDATA    
+    INY
+
+    ; every 4 we need to write a bunch of empty palette entries
+    INX
+    TXA
+    AND #$03
+    BNE :+
+
+    CLC
+    LDA CURR_PALETTE_ADDR
+    ADC #$10
+    STA CGADD
+    STA CURR_PALETTE_ADDR
+
+:
+    TXA
+    AND #$0F
+    CMP #$00
+    BNE :+
+    ; after 16 entries we write an empty set of palettes
+    CLC
+    LDA CURR_PALETTE_ADDR
+    ADC #$40
+    STA CGADD
+    STA CURR_PALETTE_ADDR 
+
+:
+    CPX #$20
+    BNE option_palette_loop
+    rtl    
+
+    
+default_options_bg_palette_indexes:
+.byte $0F, $07, $00, $01, $0F, $02, $01, $1C, $0F, $0A, $18, $28, $0F, $17, $19, $10
+
+default_options_sprite_palette_indexes:
+.byte $0F, $30, $15, $0F, $0F, $30, $00, $0F, $0F, $3B, $1B, $0F, $0F, $06, $16, $38
+
+default_options_palette:
+.byte $00, $00, $FF, $7F, $74, $64, $42, $50, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $F7, $02, $33, $01, $6A, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $29, $6F, $07, $02, $A0, $44, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $BF, $65, $8C, $31, $76, $3C, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+
+options_sprite_palette:
+.byte $00, $00, $FF, $7F, $1F, $3A, $6A, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $78, $7F, $42, $50, $76, $3C, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $08, $7D, $D8, $7D, $78, $7F, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $0D, $00, $D6, $10, $9C, $4B, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+

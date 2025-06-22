@@ -1506,7 +1506,9 @@ STA $36
 STA $37
 RTS
 
-.byte $A2, $60, $D0, $02
+; EEE6 - continue resets
+  LDX #$60
+  BNE :+
 
 ;EEEA - reset starting variables
 ; LDX #$30
@@ -1515,8 +1517,10 @@ RTS
 ; INX
 ; CPX #$F0
 ; BNE :-
-jslb reset_starting_vars, $a0
-nops 8
+LDX #$30
+:
+  jslb reset_starting_vars, $a0
+  nops 6
 LDX #$07
 LDY #$03
 STY $01
@@ -2041,10 +2045,13 @@ jsr WriteAPUControl ; STA ApuStatus_4015
   rts
 
 @load_configured_starting_level:
+LDA $30
+BNE :+
 LDA OPTIONS_STARTING_LEVEL
 STA $30
 ; set to zero so if the game loops we go back to lvl 1
 STZ OPTIONS_STARTING_LEVEL
+:
 RTS
 
 @lives_options:
@@ -2067,7 +2074,7 @@ BEQ :+
 
 rts
 
-repeat $FF, 21
+repeat $FF, 17
 
 ; .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 ; .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF

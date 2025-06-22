@@ -6,6 +6,17 @@
 queue_fade_of_boss_music:
   LDA #$01
   STA $06DA
+  LDA MSU_SELECTED
+  BNE :++
+  :
+    LDA #$3A
+    STA $06DE
+    RTL
+  :
+  
+  LDA TRACKS_AVAILABLE + 7
+  BEQ :--
+
   LDA #$3A
   jslb queue_fade_to_next_track, $b2
   STA $06DE
@@ -13,7 +24,6 @@ queue_fade_of_boss_music:
 
 ; rewrite of eeea - reseting starting variables
 reset_starting_vars:
-  LDX #$30
   JSR $E8C3
   : STA $00,X
   INX

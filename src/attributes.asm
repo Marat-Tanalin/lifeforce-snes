@@ -15,7 +15,7 @@ check_and_copy_attribute_buffer:
   LDA ATTRIBUTE_DMA
   BEQ :+
   JSR copy_prepped_attributes_to_vram
-  
+:
   RTS
 
 copy_single_prepped_attribute:
@@ -264,15 +264,6 @@ check_and_copy_nes_attributes_to_buffer:
     :
     jsr convert_attributes_inf
   :
-
-  ; LDA ATTR2_NES_HAS_VALUES
-  ; BEQ :++
-  ;   LDA ATTRIBUTE2_DMA
-  ;   beq :+
-  ;     jsr copy_prepped_attributes2_to_vram
-  ;   :
-  ;   JSR convert_attributes2_inf
-  ; :
 
   pla
   sta ATTR_WORK_BYTE_3
@@ -842,6 +833,3 @@ starting_address_lookup:
 
 attribute_1_lookup:
 .byte $00, $04, $08, $0C
-
-
-  ; .include "attributes2.asm"

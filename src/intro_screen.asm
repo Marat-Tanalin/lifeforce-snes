@@ -21,7 +21,7 @@ intro_screen_data:
 .byte $1b, $32, $00                                                     ; BY
 .byte $26, $1e, $26, $1b, $25, $1e, $2b, $2c, $ff                       ; MEMBLERS
 
-.byte $78, $23, $2b, $1e, $2f, $10, $ff ; Version (REV0)
+.byte $78, $23, $2b, $1e, $2f, $1A, $ff ; Version (REV0)
 .byte $ff, $ff
 
 write_intro_palette:
